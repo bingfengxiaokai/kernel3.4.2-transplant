@@ -46,6 +46,10 @@
 #include <plat/devs.h>
 #include <plat/pm.h>
 
+#include <linux/dm9000.h>
+
+#define MACH_SMDK2440_DM9K_BASE (S3C2410_CS4 + 0x300)
+
 /* LED devices */
 
 static struct s3c24xx_led_platdata smdk_pdata_led4 = {
@@ -152,6 +156,44 @@ static struct s3c2410_platform_nand smdk_nand_info = {
 	.sets		= smdk_nand_sets,
 };
 
+/* DM9000AEP 10/100 ethernet controller */
+
+static struct resource SMDK2440_dm9k_resource[] = {
+	[0] = {
+		.start = MACH_SMDK2440_DM9K_BASE,
+		.end   = MACH_SMDK2440_DM9K_BASE + 3,
+		.flags = IORESOURCE_MEM
+	},
+	[1] = {
+		.start = MACH_SMDK2440_DM9K_BASE + 4,
+		.end   = MACH_SMDK2440_DM9K_BASE + 7,
+		.flags = IORESOURCE_MEM
+	},
+	[2] = {
+		.start = IRQ_EINT7,
+		.end   = IRQ_EINT7,
+		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	}
+};
+
+
+/*
+ * The DM9000 has no eeprom, and it's MAC address is set by
+ * the bootloader before starting the kernel.
+ */
+static struct dm9000_plat_data SMDK2440_dm9k_pdata = {
+	.flags		= (DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM),
+};
+
+static struct platform_device SMDK2440_device_eth = {
+	.name		= "dm9000",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(SMDK2440_dm9k_resource),
+	.resource	= SMDK2440_dm9k_resource,
+	.dev		= {
+		.platform_data	= &SMDK2440_dm9k_pdata,
+	},
+};
 /* devices we initialise */
 
 static struct platform_device __initdata *smdk_devs[] = {
@@ -160,6 +202,7 @@ static struct platform_device __initdata *smdk_devs[] = {
 	&smdk_led5,
 	&smdk_led6,
 	&smdk_led7,
+	&SMDK2440_device_eth,
 };
 
 void __init smdk_machine_init(void)
