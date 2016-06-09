@@ -301,6 +301,11 @@ static struct resource mini2440_dm9k_resource[] = {
 		.flags = IORESOURCE_MEM
 	},
 	[2] = {
+		.start = S3C2410_PA_MEMCTRL,
+		.end   = S3C2410_PA_MEMCTRL + S3C24XX_SZ_MEMCTRL,
+		.flags = IORESOURCE_MEM
+	},
+	[3] = {
 		.start = IRQ_EINT7,
 		.end   = IRQ_EINT7,
 		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,

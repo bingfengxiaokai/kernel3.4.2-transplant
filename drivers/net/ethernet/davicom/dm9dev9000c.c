@@ -61,6 +61,7 @@ V2.09 05/24/2007	-support ethtool and mii-tool
 //#define RDBUG   /* check RX FIFO pointer */
 //#define DM8606
 
+#define	CARDNAME	"DM9000"
 #define DRV_NAME	"dm9KS"
 #define DRV_VERSION	"2.09"
 #define DRV_RELDATE	"2007-11-22"
@@ -84,6 +85,8 @@ V2.09 05/24/2007	-support ethtool and mii-tool
 #include <linux/mii.h>
 #include <linux/ethtool.h>
 #include <asm/uaccess.h>
+#include <linux/platform_device.h>
+
 
 #ifdef CONFIG_ARCH_MAINSTONE
 #include <asm/io.h>
@@ -176,6 +179,14 @@ V2.09 05/24/2007	-support ethtool and mii-tool
 
 #define DMFE_TIMER_WUT  jiffies+(HZ*5)	/* timer wakeup time : 5 second */
 
+/*For memory controller register*/
+#define BANKCON0OFS		0x04
+#define BANKCON1OFS		0x08
+#define BANKCON2OFS		0x0C
+#define BANKCON3OFS		0x10
+#define BANKCON4OFS		0x14
+#define BANKCON5OFS		0x18
+
 #ifdef DM9KS_DEBUG
 #define DMFE_DBUG(dbug_now, msg, vaule)\
 if (dmfe_debug||dbug_now) printk(KERN_ERR "dmfe: %s %x\n", msg, vaule)
@@ -215,6 +226,8 @@ enum DM9KS_PHY_mode {
 typedef struct board_info { 
 	u32 io_addr;/* Register I/O base address */
 	u32 io_data;/* Data I/O address */
+	u32 bwscon_addr;
+	u32 bankcon_addr;
 	u8 op_mode;/* PHY operation mode */
 	u8 io_mode;/* 0:word, 2:byte */
 	u8 Speed;	/* current speed */
@@ -241,6 +254,9 @@ static int mode       = DM9KS_AUTO;
 static int media_mode = DM9KS_AUTO;
 static int  irq        = DM9KS_IRQ;
 static int iobase     = DM9KS_MIN_IO;
+static int bwscon	  = 0;
+
+
 
 /* debug code */
 /*
@@ -304,6 +320,7 @@ u32 inl(u32 ioaddr)
 #endif
 
 /* function declaration ------------------------------------- */
+void s3c2440_netcart_memory_set(struct net_device *dev);
 int dmfe_probe1(struct net_device *);
 static int dmfe_open(struct net_device *);
 static int dmfe_start_xmit(struct sk_buff *, struct net_device *);
@@ -399,6 +416,8 @@ struct net_device * __init dmfe_probe(void)
 	err = dmfe_probe1(dev);
 	if (err)
 		goto out;
+
+	s3c2440_netcart_memory_set(dev);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
 	err = register_netdev(dev);
 	if (err)
@@ -451,7 +470,9 @@ int __init dmfe_probe1(struct net_device *dev)
 			//db = (board_info_t *)netdev_priv(dev);
 			dmfe_dev    = dev;
 			db->io_addr  = iobase;
-			db->io_data = iobase + 4;   
+			db->io_data = iobase + 4; 
+			db->bwscon_addr = bwscon;
+			db->bankcon_addr = bwscon + BANKCON4OFS;
 			db->chip_revision = ior(db, DM9KS_CHIPR);
 			
 			chip_info = ior(db,0x43);
@@ -1723,23 +1744,124 @@ static struct ethtool_ops dmfe_ethtool_ops = {
 };
 #endif
 
-//#ifdef MODULE
+/*
+ * Search DM9000 board, allocate space and register it
+ */
+static int __devinit
+dm9000_probe(struct platform_device *pdev)
+{
 
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Davicom DM9000/DM9010 ISA/uP Fast Ethernet Driver");
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0) 
-MODULE_PARM(mode, "i");
-MODULE_PARM(irq, "i");
-MODULE_PARM(iobase, "i");
+	struct resource *iobase_src, *bwscon_src, *irq_src;
+	iobase_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if(iobase_src == NULL)
+		goto exit;
+	bwscon_src = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	if(bwscon_src == NULL)
+		goto exit;
+	irq_src  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if(irq_src ==  NULL)
+		goto exit;
+
+	printk("DM9000 setting iobase = 0x%x, bwscon = 0x%x, irq = 0x%x\n", iobase_src->start, bwscon_src->start, irq_src->start);
+
+	iobase = (int)ioremap(iobase_src->start, 4);
+	bwscon = (int)ioremap(bwscon_src->start, 4);
+	irq = (int)irq_src->start;
+
+
+	switch(mode) {
+		case DM9KS_10MHD:
+		case DM9KS_100MHD:
+		case DM9KS_10MFD:
+		case DM9KS_100MFD:
+			media_mode = mode;
+			break;
+		default:
+			media_mode = DM9KS_AUTO;
+	}
+	dmfe_dev = dmfe_probe();
+	if(IS_ERR(dmfe_dev))
+		return PTR_ERR(dmfe_dev);
+	
+	platform_set_drvdata(pdev, dmfe_dev);
+	return 0;
+exit:
+	printk("%s, setting error",__FUNCTION__);
+
+}
+
+static int __devexit
+dm9000_drv_remove(struct platform_device *pdev)
+{
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct board_info *db; 
+
+	db =  (board_info_t *)netdev_priv(ndev);
+	platform_set_drvdata(pdev, NULL);
+
+	unregister_netdev(ndev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+		kfree(ndev);
 #else
-module_param(mode, int, 0);
-module_param(irq, int, 0);
-module_param(iobase, int, 0);
-#endif           
-MODULE_PARM_DESC(mode,"Media Speed, 0:10MHD, 1:10MFD, 4:100MHD, 5:100MFD");
-MODULE_PARM_DESC(irq,"EtherLink IRQ number");
-MODULE_PARM_DESC(iobase, "EtherLink I/O base address");
+		free_netdev(ndev);
+#endif
+	iounmap((void *)db->io_addr);
+	DMFE_DBUG(0, "clean_module() exit", 0);
 
+	return 0;
+}
+
+
+static struct platform_driver dm9000_driver = {
+	.driver	= {
+		.name    = "dm9000",
+		.owner	 = THIS_MODULE,
+	//	.pm	 = &dm9000_drv_pm_ops,
+	},
+	.probe   = dm9000_probe,
+	.remove  = __devexit_p(dm9000_drv_remove),
+};
+
+
+
+static int __init
+dm9000c_init(void)
+{
+	printk(KERN_INFO "%s Ethernet Driver, V%s\n", CARDNAME, DRV_VERSION);
+
+	return platform_driver_register(&dm9000_driver);
+}
+
+
+void s3c2440_netcart_memory_set(struct net_device *dev)
+{
+	struct board_info *db;    /* Point a board information structure */
+	unsigned int regset;
+	volatile unsigned int *bwscon; // 0x48000000
+	volatile unsigned int *bankcon; // 0x48000014
+	
+	db = (board_info_t *)netdev_priv(dev);
+	bwscon =  (unsigned int *)db->bwscon_addr;
+	bankcon = (unsigned int *)db->bankcon_addr;
+	
+	regset = *bwscon;
+	regset &= ~(0xf<<16);
+	regset |= (1<<16);
+	*bwscon = regset;
+	
+	*bankcon = (7<<8)|(1<<6);
+
+	iounmap(bwscon);
+	
+}
+
+void __exit dm9000c_exit(void)
+{
+	platform_driver_unregister(&dm9000_driver);
+}
+
+
+#if 0
 /* Description: 
    when user used insmod to add module, system invoked init_module()
    to initilize and register.
@@ -1815,6 +1937,9 @@ int __init dm9000c_init(void)
 		return PTR_ERR(dmfe_dev);
 	return 0;
 }
+
+
+
 /* Description: 
    when user used rmmod to delete module, system invoked clean_module()
    to  un-register DEVICE.
@@ -1835,9 +1960,25 @@ void __exit dm9000c_exit(void)
 
 	DMFE_DBUG(0, "clean_module() exit", 0);
 }
+#endif
 
 module_init(dm9000c_init);
 module_exit(dm9000c_exit);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Davicom DM9000/DM9010 ISA/uP Fast Ethernet Driver");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0) 
+MODULE_PARM(mode, "i");
+MODULE_PARM(irq, "i");
+MODULE_PARM(iobase, "i");
+#else
+module_param(mode, int, 0);
+module_param(irq, int, 0);
+module_param(iobase, int, 0);
+#endif           
+MODULE_PARM_DESC(mode,"Media Speed, 0:10MHD, 1:10MFD, 4:100MHD, 5:100MFD");
+MODULE_PARM_DESC(irq,"EtherLink IRQ number");
+MODULE_PARM_DESC(iobase, "EtherLink I/O base address");
+
 
 //#endif
 
