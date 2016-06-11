@@ -53,34 +53,43 @@
 /* LED devices */
 
 static struct s3c24xx_led_platdata smdk_pdata_led4 = {
-	.gpio		= S3C2410_GPF(4),
+	.gpio		= S3C2410_GPB(5),
 	.flags		= S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-	.name		= "led4",
-	.def_trigger	= "timer",
+	.name		= "led1",
+	.def_trigger	= "",
 };
 
 static struct s3c24xx_led_platdata smdk_pdata_led5 = {
-	.gpio		= S3C2410_GPF(5),
+	.gpio		= S3C2410_GPB(6),
 	.flags		= S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-	.name		= "led5",
-	.def_trigger	= "nand-disk",
+	.name		= "led2",
+	.def_trigger	= "",
 };
 
 static struct s3c24xx_led_platdata smdk_pdata_led6 = {
-	.gpio		= S3C2410_GPF(6),
+	.gpio		= S3C2410_GPB(7),
 	.flags		= S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-	.name		= "led6",
+	.name		= "led3",
+	.def_trigger	= "",
 };
 
 static struct s3c24xx_led_platdata smdk_pdata_led7 = {
-	.gpio		= S3C2410_GPF(7),
+	.gpio		= S3C2410_GPB(8),
 	.flags		= S3C24XX_LEDF_ACTLOW | S3C24XX_LEDF_TRISTATE,
-	.name		= "led7",
+	.name		= "led4",
+	.def_trigger	= "",
+};
+
+
+static struct s3c24xx_led_platdata smdk2440_led_backlight = {
+	.gpio		= S3C2410_GPG(4),
+	.name		= "backlight",
+	.def_trigger	= "",
 };
 
 static struct platform_device smdk_led4 = {
 	.name		= "s3c24xx_led",
-	.id		= 0,
+	.id			= 0,
 	.dev		= {
 		.platform_data = &smdk_pdata_led4,
 	},
@@ -88,7 +97,7 @@ static struct platform_device smdk_led4 = {
 
 static struct platform_device smdk_led5 = {
 	.name		= "s3c24xx_led",
-	.id		= 1,
+	.id			= 1,
 	.dev		= {
 		.platform_data = &smdk_pdata_led5,
 	},
@@ -96,7 +105,7 @@ static struct platform_device smdk_led5 = {
 
 static struct platform_device smdk_led6 = {
 	.name		= "s3c24xx_led",
-	.id		= 2,
+	.id			= 2,
 	.dev		= {
 		.platform_data = &smdk_pdata_led6,
 	},
@@ -104,11 +113,20 @@ static struct platform_device smdk_led6 = {
 
 static struct platform_device smdk_led7 = {
 	.name		= "s3c24xx_led",
-	.id		= 3,
+	.id			= 3,
 	.dev		= {
 		.platform_data = &smdk_pdata_led7,
 	},
 };
+
+static struct platform_device smdk_backlight = {
+	.name		= "s3c24xx_led",
+	.id			= -1,
+	.dev		= {
+		.platform_data = &smdk2440_led_backlight,
+	},
+};
+
 
 /* NAND parititon from 2.4.18-swl5 */
 
@@ -137,10 +155,10 @@ static struct mtd_partition smdk_default_nand_part[] = {
 
 static struct s3c2410_nand_set smdk_nand_sets[] = {
 	[0] = {
-		.name		= "NAND",
-		.nr_chips	= 1,
+		.name			= "NAND",
+		.nr_chips		= 1,
 		.nr_partitions	= ARRAY_SIZE(smdk_default_nand_part),
-		.partitions	= smdk_default_nand_part,
+		.partitions		= smdk_default_nand_part,
 	},
 };
 
@@ -207,6 +225,7 @@ static struct platform_device __initdata *smdk_devs[] = {
 	&smdk_led5,
 	&smdk_led6,
 	&smdk_led7,
+	&smdk_backlight,
 	&SMDK2440_device_eth,
 };
 
