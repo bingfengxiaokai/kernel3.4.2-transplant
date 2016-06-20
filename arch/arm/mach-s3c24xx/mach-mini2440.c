@@ -348,46 +348,36 @@ static struct platform_device mini2440_device_eth = {
  *	  .....
  */
 static struct gpio_keys_button mini2440_buttons[] = {
+
 	{
-		.gpio		= S3C2410_GPG(0),		/* K1 */
-		.code		= KEY_F1,
-		.desc		= "Button 1",
+		.gpio		= S3C2410_GPF(1),		/* K1 */
+		.code		= KEY_L,
+		.desc		= "Button up",
 		.active_low	= 1,
+		.debounce_interval = 20,
 	},
 	{
-		.gpio		= S3C2410_GPG(3),		/* K2 */
-		.code		= KEY_F2,
-		.desc		= "Button 2",
+		.gpio		= S3C2410_GPF(4),		/* K2 */
+		.code		= KEY_S,
+		.desc		= "Button down",
 		.active_low	= 1,
+		.debounce_interval = 20,
 	},
 	{
-		.gpio		= S3C2410_GPG(5),		/* K3 */
-		.code		= KEY_F3,
-		.desc		= "Button 3",
+		.gpio		= S3C2410_GPF(2),		/* K3 */
+		.code		= KEY_ENTER,
+		.desc		= "Button left",
 		.active_low	= 1,
+		.debounce_interval = 20,
 	},
 	{
-		.gpio		= S3C2410_GPG(6),		/* K4 */
-		.code		= KEY_POWER,
-		.desc		= "Power",
+		.gpio		= S3C2410_GPF(0),		/* K4 */
+		.code		= KEY_LEFTSHIFT,
+		.desc		= "Button right",
 		.active_low	= 1,
+		.debounce_interval = 20,
 	},
-	{
-		.gpio		= S3C2410_GPG(7),		/* K5 */
-		.code		= KEY_F5,
-		.desc		= "Button 5",
-		.active_low	= 1,
-	},
-#if 0
-	/* this pin is also known as TCLK1 and seems to already
-	 * marked as "in use" somehow in the kernel -- possibly wrongly */
-	{
-		.gpio		= S3C2410_GPG(11),	/* K6 */
-		.code		= KEY_F6,
-		.desc		= "Button 6",
-		.active_low	= 1,
-	},
-#endif
+
 };
 
 static struct gpio_keys_platform_data mini2440_button_data = {
