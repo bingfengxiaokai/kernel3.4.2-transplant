@@ -109,7 +109,7 @@ static struct s3c2410_udc_mach_info mini2440_udc_cfg __initdata = {
 /*
  * This macro simplifies the table bellow
  */
-#define _LCD_DECLARE(_clock,_xres,margin_left,margin_right,hsync, \
+#define _LCD_DECLARE(_clock,_bpp,_type,_xres,margin_left,margin_right,hsync, \
 			_yres,margin_top,margin_bottom,vsync, refresh) \
 	.width = _xres, \
 	.xres = _xres, \
@@ -121,27 +121,37 @@ static struct s3c2410_udc_mach_info mini2440_udc_cfg __initdata = {
 	.lower_margin	= margin_bottom,	\
 	.hsync_len	= hsync,	\
 	.vsync_len	= vsync,	\
-	.pixclock	= ((_clock*100000000000LL) /	\
-			   ((refresh) * \
-			   (hsync + margin_left + _xres + margin_right) * \
-			   (vsync + margin_top + _yres + margin_bottom))), \
-	.bpp		= 16,\
-	.type		= (S3C2410_LCDCON1_TFT16BPP |\
-			   S3C2410_LCDCON1_TFT)
+	.pixclock	= _clock, \
+	.bpp		= _bpp,\
+	.type		= _type
 
+//S3C2410_LCDCON5_BPP24BL
 static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
-	[0] = {	/* mini2440 + 3.5" TFT + touchscreen */
+	[0] = {	/*tq2440 + 4.3" TFT + touchscreen */
 		_LCD_DECLARE(
-			7,			/* The 3.5 is quite fast */
-			240, 21, 38, 6, 	/* x timing */
-			320, 4, 4, 2,		/* y timing */
+			100000,16,(S3C2410_LCDCON1_TFT16BPP | S3C2410_LCDCON1_TFT),
+			480, 2, 2, 41, 	/* x timing */
+			272, 2, 2, 10,		/* y timing */
 			60),			/* refresh rate */
 		.lcdcon5	= (S3C2410_LCDCON5_FRM565 |
 				   S3C2410_LCDCON5_INVVLINE |
 				   S3C2410_LCDCON5_INVVFRAME |
-				   S3C2410_LCDCON5_INVVDEN |
+				   S3C2410_LCDCON5_HWSWP	|
 				   S3C2410_LCDCON5_PWREN),
 	},
+	[1] = {	/* mini2440 + 3.5" TFT + touchscreen */
+		_LCD_DECLARE(
+			100000,32,(S3C2410_LCDCON1_TFT24BPP | S3C2410_LCDCON1_TFT),
+			480, 2, 2, 41, 	/* x timing */
+			272, 2, 2, 10,		/* y timing */
+			60),			/* refresh rate */
+		.lcdcon5	= (S3C2410_LCDCON5_BPP24BL |
+				   S3C2410_LCDCON5_INVVLINE |
+				   S3C2410_LCDCON5_INVVFRAME |
+				   S3C2410_LCDCON5_PWREN),
+	},
+
+#if 0
 	[1] = { /* mini2440 + 7" TFT + touchscreen */
 		_LCD_DECLARE(
 			10,			/* the 7" runs slower */
@@ -187,6 +197,7 @@ static struct s3c2410fb_display mini2440_lcd_cfg[] __initdata = {
 				   S3C2410_LCDCON5_INVVCLK |
 				   S3C2410_LCDCON5_HWSWP),
 	},
+#endif
 };
 
 /* todo - put into gpio header */
@@ -202,7 +213,7 @@ static struct s3c2410fb_mach_info mini2440_fb_info __initdata = {
 	/* Enable VD[2..7], VD[10..15], VD[18..23] and VCLK, syncs, VDEN
 	 * and disable the pull down resistors on pins we are using for LCD
 	 * data. */
-
+#if 0
 	.gpcup		= (0xf << 1) | (0x3f << 10),
 
 	.gpccon		= (S3C2410_GPC1_VCLK   | S3C2410_GPC2_VLINE |
@@ -217,21 +228,61 @@ static struct s3c2410fb_mach_info mini2440_fb_info __initdata = {
 			   S3C2410_GPCCON_MASK(12) | S3C2410_GPCCON_MASK(13) |
 			   S3C2410_GPCCON_MASK(14) | S3C2410_GPCCON_MASK(15)),
 
-	.gpdup		= (0x3f << 2) | (0x3f << 10),
+	.gpdup		= (0x3f << 2) | (0x1f << 11),
 
 	.gpdcon		= (S3C2410_GPD2_VD10  | S3C2410_GPD3_VD11 |
 			   S3C2410_GPD4_VD12  | S3C2410_GPD5_VD13 |
 			   S3C2410_GPD6_VD14  | S3C2410_GPD7_VD15 |
-			   S3C2410_GPD10_VD18 | S3C2410_GPD11_VD19 |
+			   S3C2410_GPD11_VD19 |
 			   S3C2410_GPD12_VD20 | S3C2410_GPD13_VD21 |
 			   S3C2410_GPD14_VD22 | S3C2410_GPD15_VD23),
 
 	.gpdcon_mask	= (S3C2410_GPDCON_MASK(2)  | S3C2410_GPDCON_MASK(3) |
 			   S3C2410_GPDCON_MASK(4)  | S3C2410_GPDCON_MASK(5) |
 			   S3C2410_GPDCON_MASK(6)  | S3C2410_GPDCON_MASK(7) |
-			   S3C2410_GPDCON_MASK(10) | S3C2410_GPDCON_MASK(11)|
+			   S3C2410_GPDCON_MASK(11)|
 			   S3C2410_GPDCON_MASK(12) | S3C2410_GPDCON_MASK(13)|
 			   S3C2410_GPDCON_MASK(14) | S3C2410_GPDCON_MASK(15)),
+#endif
+	.gpcup		= (0xf << 1) | (0xff << 8),
+
+	.gpccon 	= (S3C2410_GPC1_VCLK   | S3C2410_GPC2_VLINE |
+			   S3C2410_GPC3_VFRAME | S3C2410_GPC4_VM |
+			   S3C2410_GPC8_VD0    | S3C2410_GPC9_VD1 |
+			   S3C2410_GPC10_VD2   | S3C2410_GPC11_VD3 |
+			   S3C2410_GPC12_VD4   | S3C2410_GPC13_VD5 |
+			   S3C2410_GPC14_VD6   | S3C2410_GPC15_VD7),
+
+	.gpccon_mask	= (S3C2410_GPCCON_MASK(1)  | S3C2410_GPCCON_MASK(2)  |
+			   S3C2410_GPCCON_MASK(3)  | S3C2410_GPCCON_MASK(4)  |
+			   S3C2410_GPCCON_MASK(8) | S3C2410_GPCCON_MASK(9) |
+			   S3C2410_GPCCON_MASK(10) | S3C2410_GPCCON_MASK(11) |
+			   S3C2410_GPCCON_MASK(12) | S3C2410_GPCCON_MASK(13) |
+			   S3C2410_GPCCON_MASK(14) | S3C2410_GPCCON_MASK(15)),
+
+	.gpdup		= 0xffff,
+
+	.gpdcon 	= (
+				S3C2410_GPD0_VD8   | S3C2410_GPD1_VD9  |
+				S3C2410_GPD2_VD10  | S3C2410_GPD3_VD11 |
+			   	S3C2410_GPD4_VD12  | S3C2410_GPD5_VD13 |
+			   	S3C2410_GPD6_VD14  | S3C2410_GPD7_VD15 |
+			   	S3C2410_GPD8_VD16  | S3C2410_GPD9_VD17 |
+			   	S3C2410_GPD10_VD18 | S3C2410_GPD11_VD19|
+			   	S3C2410_GPD12_VD20 | S3C2410_GPD13_VD21 |
+			   	S3C2410_GPD14_VD22 | S3C2410_GPD15_VD23),
+
+	.gpdcon_mask	= (
+				S3C2410_GPDCON_MASK(0)  | S3C2410_GPDCON_MASK(1) |
+				S3C2410_GPDCON_MASK(2)  | S3C2410_GPDCON_MASK(3) |
+			   	S3C2410_GPDCON_MASK(4)  | S3C2410_GPDCON_MASK(5) |
+			   	S3C2410_GPDCON_MASK(6)  | S3C2410_GPDCON_MASK(7) |
+			   	S3C2410_GPDCON_MASK(8)  | S3C2410_GPDCON_MASK(9) |
+			   	S3C2410_GPDCON_MASK(10) | S3C2410_GPDCON_MASK(11)|
+			   	S3C2410_GPDCON_MASK(12) | S3C2410_GPDCON_MASK(13)|
+			   	S3C2410_GPDCON_MASK(14) | S3C2410_GPDCON_MASK(15)),
+
+
 };
 
 /* MMC/SD  */
@@ -542,7 +593,7 @@ static void __init mini2440_map_io(void)
  * 0-9 LCD configuration
  *
  */
-static char mini2440_features_str[12] __initdata = "0tb";
+static char mini2440_features_str[12] __initdata = "1tb";
 
 static int __init mini2440_features_setup(char *str)
 {
