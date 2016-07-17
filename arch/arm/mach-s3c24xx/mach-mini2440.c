@@ -35,6 +35,7 @@
 
 #include <mach/hardware.h>
 #include <mach/fb.h>
+#include <plat/ts.h>
 #include <asm/mach-types.h>
 
 #include <plat/regs-serial.h>
@@ -284,6 +285,13 @@ static struct s3c2410fb_mach_info mini2440_fb_info __initdata = {
 
 
 };
+
+static struct s3c2410_ts_mach_info tq2440_ts_data __initdata = {
+	.delay			= 10000,
+	.presc			= 49,
+	.oversampling_shift	= 2,
+};
+
 
 /* MMC/SD  */
 
@@ -575,6 +583,8 @@ static struct platform_device *mini2440_devices[] __initdata = {
 	&uda1340_codec,
 	&mini2440_audio,
 	&samsung_asoc_dma,
+	&s3c_device_adc,
+	&s3c_device_ts,
 };
 
 static void __init mini2440_map_io(void)
@@ -726,6 +736,7 @@ static void __init mini2440_init(void)
 	s3c24xx_mci_set_platdata(&mini2440_mmc_cfg);
 	s3c_nand_set_platdata(&mini2440_nand_info);
 	s3c_i2c0_set_platdata(NULL);
+	s3c24xx_ts_set_platdata(&tq2440_ts_data);
 
 	i2c_register_board_info(0, mini2440_i2c_devs,
 				ARRAY_SIZE(mini2440_i2c_devs));

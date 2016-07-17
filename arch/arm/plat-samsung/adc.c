@@ -11,6 +11,12 @@
  * the Free Software Foundation; either version 2 of the License.
 */
 
+#define CONFIG_ADC_S3C2410_DEBUG
+#ifdef CONFIG_ADC_S3C2410_DEBUG
+#define DEBUG
+#endif
+
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
@@ -157,7 +163,7 @@ int s3c_adc_start(struct s3c_adc_client *client,
 		return -EINVAL;
 	}
 
-	if (client->is_ts && adc->ts_pend)
+	if (client->is_ts && adc->cur)
 		return -EAGAIN;
 
 	spin_lock_irqsave(&adc->lock, flags);
@@ -299,6 +305,9 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 
 	client->nr_samples--;
 
+	if(client->nr_samples < 0)
+		client->nr_samples = 0;
+
 	if (cpu == TYPE_ADCV1 || cpu == TYPE_ADCV11) {
 		data0 &= 0x3ff;
 		data1 &= 0x3ff;
@@ -320,7 +329,6 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 		spin_lock(&adc->lock);
 		(client->select_cb)(client, 0);
 		adc->cur = NULL;
-
 		s3c_adc_try(adc);
 		spin_unlock(&adc->lock);
 	}

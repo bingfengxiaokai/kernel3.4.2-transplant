@@ -171,7 +171,8 @@ static irqreturn_t stylus_irq(int irq, void *dev_id)
 	 * timer isn't running anyways. */
 
 	if (down)
-		s3c_adc_start(ts.client, 0, 1 << ts.shift);
+		mod_timer(&touch_timer, jiffies + HZ/50);
+		//s3c_adc_start(ts.client, 0, 1 << ts.shift);
 	else
 		dev_dbg(ts.dev, "%s: count=%d\n", __func__, ts.count);
 
