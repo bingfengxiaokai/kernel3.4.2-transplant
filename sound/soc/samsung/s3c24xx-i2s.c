@@ -14,6 +14,8 @@
  *  option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/io.h>
